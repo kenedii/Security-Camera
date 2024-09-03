@@ -2,30 +2,42 @@ from cv2 import VideoCapture, imshow, waitKey, destroyAllWindows, imwrite
 import cv2
 import face_recognition
 import os
-import numpy as np
 import time
 import pickle
 
 # Directory to save snapshots
 BASE_DIR = 'snapshots'
 ENCODINGS_FILE = 'face_encodings.pkl'
+TIMESTAMPS_FILE = 'face_timestamps.pkl'
 
-def load_encodings():
-    """Load face encodings from the pkl file."""
-    if os.path.exists(ENCODINGS_FILE):
-        with open(ENCODINGS_FILE, 'rb') as f:
-            return pickle.load(f)
-    return {}
+def rw_encodings(operation='load', encodings=None): # Read/Write Encodings
+    if operation == 'load':
+        """Load face encodings from the pkl file."""
+        if os.path.exists(ENCODINGS_FILE):
+            with open(ENCODINGS_FILE, 'rb') as f:
+                return pickle.load(f)
+        return {}
+    elif operation == 'save':
+        """Save face encodings to the pkl file."""
+        with open(ENCODINGS_FILE, 'wb') as f:
+            pickle.dump(encodings, f)
 
-def save_encodings(encodings):
-    """Save face encodings to the pkl file."""
-    with open(ENCODINGS_FILE, 'wb') as f:
-        pickle.dump(encodings, f)
+def rw_timestamps(operation = 'load', timestamps=None): # Read/Write Timestamps
+    if operation == 'load':
+        """Load face timestamps from the pkl file."""
+        if os.path.exists(TIMESTAMPS_FILE):
+            with open(TIMESTAMPS_FILE, 'rb') as f:
+                return pickle.load(f)
+        return {}
+    elif operation == 'save':
+        """Save face timestamps to the pkl file."""
+        with open(TIMESTAMPS_FILE, 'wb') as f:
+            pickle.dump(timestamps, f)
 
-def get_next_person_id():
+def get_next_person_id(face_encodings):
     """Get the next available person folder ID."""
-    existing_ids = [int(d) for d in os.listdir(BASE_DIR) if d.isdigit()]
-    next_id = max(existing_ids, default=0) + 1
+    existing_ids = list(face_encodings.keys())
+    next_id = max(existing_ids) + 1
     return next_id
 
 def ensure_directory(person_id):
@@ -35,13 +47,6 @@ def ensure_directory(person_id):
         os.makedirs(person_dir)
     return person_dir
 
-def save_face_image(face_image, person_id):
-    """Save the cropped face image as face.png."""
-    person_dir = ensure_directory(person_id)
-    face_file = os.path.join(person_dir, 'face.png')
-    cv2.imwrite(face_file, face_image)
-    print(f"Saved main face image to {face_file}")
-
 def save_full_image(img, person_id):
     """Save the full image in the person's folder."""
     person_dir = ensure_directory(person_id)
@@ -49,7 +54,20 @@ def save_full_image(img, person_id):
     cv2.imwrite(full_image_file, full_image_file)
     print(f"Saved full image to {full_image_file}")
 
-def takeSnapshot():
+def was_recently_seen(person_id, timestamps, cooldown=10):
+    """Check if the person was seen within the last 'cooldown' seconds."""
+    if person_id in timestamps and timestamps[person_id]:
+        last_seen = timestamps[person_id][0]
+        return (time.time() - last_seen) < cooldown
+    return False
+
+def update_timestamp(person_id, timestamps):
+    """Update the timestamps for a person ID."""
+    if person_id not in timestamps:
+        timestamps[person_id] = []
+    timestamps[person_id].insert(0, time.time())  # Add the current time to the front of the list
+
+def takeSnapshot(cooldown=10):
     try:
         # Initialize the camera
         cam = VideoCapture(0)  # 0 -> index of camera
@@ -59,8 +77,9 @@ def takeSnapshot():
             face_locations = face_recognition.face_locations(rgb_frame)
             face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
             
-            # Load face encodings from the pkl file
-            known_encodings = load_encodings()
+            # Load face encodings and timestamps from the pkl files
+            known_encodings = rw_encodings(operation='load')
+            face_timestamps = rw_timestamps(operation='load')
 
             imshow("cam-test", img)
             key = waitKey(5000)  # Display the image for 5 seconds
@@ -70,25 +89,29 @@ def takeSnapshot():
             
             # Process each detected face
             for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
-                face_image = img[top:bottom, left:right]
+                #face_image = img[top:bottom, left:right]           # Crop the face, might not be necessary
                 matched = False
                 
                 for person_id, known_encoding in known_encodings.items():
                     match = face_recognition.compare_faces([known_encoding], face_encoding)
                     if match[0]:
-                        save_full_image(img, person_id)
+                        # Check if the person was recently seen
+                        if not was_recently_seen(person_id, face_timestamps, cooldown):
+                            save_full_image(img, person_id)
+                            update_timestamp(person_id, face_timestamps)
                         matched = True
                         break
 
                 if not matched:
                     # No match found, save the new face
-                    new_person_id = get_next_person_id()
-                    save_face_image(face_image, new_person_id)
+                    new_person_id = get_next_person_id(face_encodings)
                     save_full_image(img, new_person_id)
                     known_encodings[new_person_id] = face_encoding
+                    update_timestamp(new_person_id, face_timestamps)
 
-            # Save updated encodings back to the pkl file
-            save_encodings(known_encodings)
+            # Save updated encodings and timestamps back to the pkl files
+            rw_encodings(operation='save', encodings=known_encodings)
+            rw_timestamps(operation='save', encodings=face_timestamps)
         else:
             print("Failed to capture image")
     except Exception as e:
