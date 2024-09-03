@@ -108,10 +108,6 @@ def takeSnapshot(face_timestamps, known_encodings, cooldown=10):
                     save_full_image(img, new_person_id)
                     known_encodings[new_person_id] = face_encoding
                     update_timestamp(new_person_id, face_timestamps)
-
-            # Save updated encodings and timestamps back to the pkl files
-            rw_encodings(operation='save', encodings=known_encodings)
-            rw_timestamps(operation='save', encodings=face_timestamps)
         else:
             print("Failed to capture image")
 
@@ -123,16 +119,22 @@ def takeSnapshot(face_timestamps, known_encodings, cooldown=10):
         destroyAllWindows()
         return known_encodings, face_timestamps
 
-def scanCamera(delay=0.6):
+def scanCamera(delay=0.6, save_data_interval=10):
     # Continuously take snapshots from the camera
     # with a delay of 'delay' seconds between each snapshot
+    # and save the face encodings and timestamps to the pkl files every 'save_data_interval' screenshots.
 
     # Load face encodings and timestamps from the pkl files
     known_encodings = rw_encodings(operation='load')
     face_timestamps = rw_timestamps(operation='load')
+    snapshots_taken = 0 # Initialize the counter for snapshots taken
 
     while True: # Start scanning, run indefinitely.
         known_encodings, face_timestamps = takeSnapshot(known_encodings=known_encodings, face_timestamps=face_timestamps)
+        if snapshots_taken % save_data_interval == 0:
+            # Save the face encodings and timestamps to the pkl files
+            rw_encodings(operation='save', encodings=known_encodings)
+            rw_timestamps(operation='save', timestamps=face_timestamps)
         time.sleep(delay)
 
 scanCamera()
