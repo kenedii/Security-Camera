@@ -114,12 +114,14 @@ def takeSnapshot(face_timestamps, known_encodings, cooldown=10):
             rw_timestamps(operation='save', encodings=face_timestamps)
         else:
             print("Failed to capture image")
+
     except Exception as e:
         print("An error occurred:", e)
     finally:
         # Release camera and close any open windows
         cam.release()
         destroyAllWindows()
+        return known_encodings, face_timestamps
 
 def scanCamera(delay=0.6):
     # Continuously take snapshots from the camera
@@ -130,7 +132,7 @@ def scanCamera(delay=0.6):
     face_timestamps = rw_timestamps(operation='load')
 
     while True: # Start scanning, run indefinitely.
-        takeSnapshot(known_encodings=known_encodings, face_timestamps=face_timestamps)
+        known_encodings, face_timestamps = takeSnapshot(known_encodings=known_encodings, face_timestamps=face_timestamps)
         time.sleep(delay)
 
 scanCamera()
