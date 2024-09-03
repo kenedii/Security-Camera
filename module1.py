@@ -67,7 +67,7 @@ def update_timestamp(person_id, timestamps):
         timestamps[person_id] = []
     timestamps[person_id].insert(0, time.time())  # Add the current time to the front of the list
 
-def takeSnapshot(cooldown=10):
+def takeSnapshot(face_timestamps, known_encodings, cooldown=10):
     try:
         # Initialize the camera
         cam = VideoCapture(0)  # 0 -> index of camera
@@ -78,7 +78,7 @@ def takeSnapshot(cooldown=10):
             face_encodings = face_recognition.face_encodings(rgb_frame, face_locations)
             
             # Load face encodings and timestamps from the pkl files
-            known_encodings = rw_encodings(operation='load')
+            known_encodings = rw_encodings(operation='load')            
             face_timestamps = rw_timestamps(operation='load')
 
             imshow("cam-test", img)
@@ -88,7 +88,7 @@ def takeSnapshot(cooldown=10):
                 return None
             
             # Process each detected face
-            for (top, right, bottom, left), face_encoding in zip(face_locations, face_encodings):
+            for face_encoding in zip(face_locations, face_encodings):
                 #face_image = img[top:bottom, left:right]           # Crop the face, might not be necessary
                 matched = False
                 
@@ -121,4 +121,16 @@ def takeSnapshot(cooldown=10):
         cam.release()
         destroyAllWindows()
 
-takeSnapshot()
+def scanCamera(delay=0.6):
+    # Continuously take snapshots from the camera
+    # with a delay of 'delay' seconds between each snapshot
+
+    # Load face encodings and timestamps from the pkl files
+    known_encodings = rw_encodings(operation='load')
+    face_timestamps = rw_timestamps(operation='load')
+
+    while True: # Start scanning, run indefinitely.
+        takeSnapshot(known_encodings=known_encodings, face_timestamps=face_timestamps)
+        time.sleep(delay)
+
+scanCamera()
