@@ -59,11 +59,12 @@ async def send_message_to_specific_client(client_id, message):
 def list_all_clients():
     return list(clients.keys())
 
-async def main():
+async def start_server():
     server = await websockets.serve(handle_client, "localhost", 8765)
     print("Server started on ws://localhost:8765")
 
     # Allow sending messages to clients from the server console
+    """
     while True:
         command = input("Enter 'all' to send to all clients, 'send' to send to a specific client, 'list' to list all clients: ").strip()
         
@@ -79,6 +80,6 @@ async def main():
         elif command == "list":
             clients_list = list_all_clients()
             print(f"Connected clients: {clients_list}")
+    """
 
-if __name__ == "__main__":
-    asyncio.run(main())
+
