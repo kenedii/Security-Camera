@@ -59,27 +59,40 @@ async def send_message_to_specific_client(client_id, message):
 def list_all_clients():
     return list(clients.keys())
 
+async def close_server(server):
+    server.close()
+    await server.wait_closed()
+    print("Server has been closed")
+
 async def start_server():
     server = await websockets.serve(handle_client, "localhost", 8765)
     print("Server started on ws://localhost:8765")
 
     # Allow sending messages to clients from the server console
     """
-    while True:
-        command = input("Enter 'all' to send to all clients, 'send' to send to a specific client, 'list' to list all clients: ").strip()
-        
-        if command == "all":
-            message = input("Enter message to send to all clients: ")
-            await send_message_to_all_clients(message)
-        
-        elif command == "send":
-            client_id = int(input("Enter client ID to send message to: "))
-            message = input(f"Enter message to send to Client {client_id}: ")
-            await send_message_to_specific_client(client_id, message)
-        
-        elif command == "list":
-            clients_list = list_all_clients()
-            print(f"Connected clients: {clients_list}")
+    try:
+        while True:
+            command = input("Enter 'all' to send to all clients, 'send' to send to a specific client, 'list' to list all clients, 'close' to shut down the server: ").strip()
+            
+            if command == "all":
+                message = input("Enter message to send to all clients: ")
+                await send_message_to_all_clients(message)
+            
+            elif command == "send":
+                client_id = int(input("Enter client ID to send message to: "))
+                message = input(f"Enter message to send to Client {client_id}: ")
+                await send_message_to_specific_client(client_id, message)
+            
+            elif command == "list":
+                clients_list = list_all_clients()
+                print(f"Connected clients: {clients_list}")
+
+            elif command == "close":
+                await close_server(server)
+                break  # Exit the loop after closing the server
+
+    except KeyboardInterrupt:
+        print("Server interrupted by user")
+        await close_server(server)
     """
-
-
+    return server
