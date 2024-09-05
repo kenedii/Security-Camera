@@ -19,6 +19,9 @@ def on_start_server():
     # Schedule the coroutine to be executed
     asyncio.run_coroutine_threadsafe(server.start_server(), loop)
 
+    # Hide the start button after the server is started
+    button.pack_forget()
+
 # Create an event loop for the background thread
 loop = asyncio.new_event_loop()
 threading.Thread(target=start_event_loop, args=(loop,), daemon=True).start()
