@@ -2,6 +2,7 @@ import customtkinter as ctk
 import asyncio
 import server
 import threading
+import tkinter as tk  # Required for IntVar
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
@@ -25,8 +26,9 @@ def on_start_server():
     b_startserver.pack_forget()
     b_closeserver.pack(pady=12, padx=10)
     
-    # Show the client frame and list clients
+    # Show the client and actions frames and list clients
     client_frame.pack(side="left", fill="y", padx=20, pady=20)
+    actions_frame.pack(side="left", fill="y", padx=20, pady=20)
     list_clients()
 
 def on_close_server():
@@ -37,25 +39,28 @@ def on_close_server():
     b_closeserver.pack_forget()
     b_startserver.pack(pady=12, padx=10)
     
-    # Hide the client frame
+    # Hide the client and actions frames
     client_frame.pack_forget()
+    actions_frame.pack_forget()
 
 def list_clients():
     # Clear the client list frame
     for widget in client_frame.winfo_children():
         widget.destroy()
 
-    # Add the label
+    # Add the label for connected clients
     label_clients = ctk.CTkLabel(master=client_frame, text="Connected clients", font=("Arial", 18))
     label_clients.pack(pady=10)
 
     # Get the list of clients from the server
     clients = server.list_all_clients()
 
+    # Shared variable for all checkboxes to ensure only one is selected at a time
+    selected_client = tk.IntVar()
+
     # List all clients with checkboxes
-    for client in clients:
-        client_var = ctk.BooleanVar()
-        checkbox = ctk.CTkCheckBox(master=client_frame, text=client, variable=client_var)
+    for idx, client in enumerate(clients):
+        checkbox = ctk.CTkRadioButton(master=client_frame, text=client, variable=selected_client, value=idx)
         checkbox.pack(anchor="w", padx=10, pady=5)
 
 # Create an event loop for the background thread
@@ -76,12 +81,28 @@ b_closeserver = ctk.CTkButton(master=frame, text="Close Server", command=on_clos
 # Create a frame for the list of clients (initially hidden)
 client_frame = ctk.CTkFrame(master=root, width=200)
 
-# Action buttons - when server is on these will appear
-b_livefeed = ctk.CTkButton(master=frame, text="View Live Feed", command=on_start_server)
-b_viewfaces = ctk.CTkButton(master=frame, text="View Faces", command=on_start_server)
-b_downlog = ctk.CTkButton(master=frame, text="Download Log", command=on_start_server)
-b_downdata = ctk.CTkButton(master=frame, text="Download all Data", command=on_start_server)
-b_shutdowncam = ctk.CTkButton(master=frame, text="Shutdown Camera", command=on_start_server)
+# Create a frame for the actions section (initially hidden)
+actions_frame = ctk.CTkFrame(master=root, width=200)
+
+# Add the label for actions at the same horizontal level
+label_actions = ctk.CTkLabel(master=actions_frame, text="Actions", font=("Arial", 18))
+label_actions.pack(pady=10)
+
+# Add action buttons underneath the "Actions" label
+b_livefeed = ctk.CTkButton(master=actions_frame, text="View Live Feed", command=on_start_server)
+b_livefeed.pack(pady=5)
+
+b_viewfaces = ctk.CTkButton(master=actions_frame, text="View Faces", command=on_start_server)
+b_viewfaces.pack(pady=5)
+
+b_downlog = ctk.CTkButton(master=actions_frame, text="Download Log", command=on_start_server)
+b_downlog.pack(pady=5)
+
+b_downdata = ctk.CTkButton(master=actions_frame, text="Download all Data", command=on_start_server)
+b_downdata.pack(pady=5)
+
+b_shutdowncam = ctk.CTkButton(master=actions_frame, text="Shutdown Camera", command=on_start_server)
+b_shutdowncam.pack(pady=5)
 
 # Run the Tkinter main loop
 root.mainloop()
