@@ -63,6 +63,10 @@ def list_clients():
         checkbox = ctk.CTkRadioButton(master=client_frame, text=client, variable=selected_client, value=idx)
         checkbox.pack(anchor="w", padx=10, pady=5)
 
+    # Add the refresh button to update the client list
+    refresh_button = ctk.CTkButton(master=client_frame, text="Refresh", command=list_clients)
+    refresh_button.pack(pady=10)
+
 # Create an event loop for the background thread
 loop = asyncio.new_event_loop()
 threading.Thread(target=start_event_loop, args=(loop,), daemon=True).start()
@@ -84,7 +88,7 @@ client_frame = ctk.CTkFrame(master=root, width=200)
 # Create a frame for the actions section (initially hidden)
 actions_frame = ctk.CTkFrame(master=root, width=200)
 
-# Add the label for actions at the same horizontal level
+# Add a label for the "Actions" section
 label_actions = ctk.CTkLabel(master=actions_frame, text="Actions", font=("Arial", 18))
 label_actions.pack(pady=10)
 
