@@ -1,17 +1,18 @@
 import asyncio
 import websockets
 
-# Flag to control when to stop receiving messages
-should_run = True
+# Task to handle the client connection
+client_task = None
 
 async def close_connection(websocket):
-    global should_run
-    try:
-        should_run = False  # Stop receiving messages
-        await websocket.close()
-        print("Connection closed successfully")
-    except Exception as e:
-        print(f"Error while closing connection: {e}")
+    global client_task
+    if client_task:
+        client_task.cancel()  # Cancel the task to stop receiving messages
+        try:
+            await websocket.close()
+            print("Connection closed successfully")
+        except Exception as e:
+            print(f"Error while closing connection: {e}")
 
 async def send_file(file_path, websocket):
     try:
@@ -29,9 +30,9 @@ async def send_file(file_path, websocket):
         print(f"Error: {e}")
 
 async def receive_messages(websocket):
-    global should_run
+    global client_task
     try:
-        while should_run:  # Only continue while the flag is True
+        while True:
             message = await websocket.recv()
             if message.startswith("FILE:"):
                 print(f"Server: {message[5:]}")
@@ -47,12 +48,8 @@ async def receive_messages(websocket):
 
 async def start_client():
     uri = "ws://localhost:8765"
+    global client_task
     async with websockets.connect(uri) as websocket:
-        try:
-            print("Connected to the server")
-            receive_task = asyncio.create_task(receive_messages(websocket))
-
-            # Wait for the receive task to complete (this will run until the connection is closed)
-            await receive_task
-        except Exception as e:
-            print(f"Connection error: {e}")
+        print("Connected to the server")
+        client_task = asyncio.create_task(receive_messages(websocket))
+        await client_task
