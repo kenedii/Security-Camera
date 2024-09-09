@@ -12,6 +12,9 @@ root = ctk.CTk()
 root.title("123SecurityCam - Server App")
 root.geometry("800x600")
 
+# Now declare selected_client after root is created
+selected_client = tk.IntVar()
+
 def start_event_loop(loop):
     asyncio.set_event_loop(loop)
     loop.run_forever()
@@ -43,7 +46,20 @@ def on_close_server():
     client_frame.pack_forget()
     actions_frame.pack_forget()
 
+def send_action_to_selected_client(action):
+    client_id = selected_client.get()  # Get the selected client from the IntVar
+    if client_id == 0:  # No client is selected
+        print("No client selected")
+        return
+    
+    # Send the action to the selected client
+    message = f"Action: {action}"
+    asyncio.run_coroutine_threadsafe(server.send_message_to_specific_client(client_id, message), loop)
+    print(f"Sent '{action}' to Client {client_id}")
+
 def list_clients():
+    global selected_client  # Ensure we are using the global selected_client variable
+    
     # Clear the client list frame
     for widget in client_frame.winfo_children():
         widget.destroy()
@@ -55,11 +71,11 @@ def list_clients():
     # Get the list of clients from the server
     clients = server.list_all_clients()
 
-    # Shared variable for all checkboxes to ensure only one is selected at a time
-    selected_client = tk.IntVar()
+    # Reset selected_client variable to ensure a new selection can be made
+    selected_client.set(0)
 
     # List all clients with checkboxes
-    for idx, client in enumerate(clients):
+    for idx, client in enumerate(clients, start=1):  # Start client ID from 1
         checkbox = ctk.CTkRadioButton(master=client_frame, text=client, variable=selected_client, value=idx)
         checkbox.pack(anchor="w", padx=10, pady=5)
 
@@ -92,20 +108,20 @@ actions_frame = ctk.CTkFrame(master=root, width=200)
 label_actions = ctk.CTkLabel(master=actions_frame, text="Actions", font=("Arial", 18))
 label_actions.pack(pady=10)
 
-# Add action buttons underneath the "Actions" label
-b_livefeed = ctk.CTkButton(master=actions_frame, text="View Live Feed", command=on_start_server)
+# Modify the action buttons to send specific actions to the selected client
+b_livefeed = ctk.CTkButton(master=actions_frame, text="View Live Feed", command=lambda: send_action_to_selected_client("LIVEFEED"))
 b_livefeed.pack(pady=5)
 
-b_viewfaces = ctk.CTkButton(master=actions_frame, text="View Faces", command=on_start_server)
+b_viewfaces = ctk.CTkButton(master=actions_frame, text="View Faces", command=lambda: send_action_to_selected_client("VIEWFACES"))
 b_viewfaces.pack(pady=5)
 
-b_downlog = ctk.CTkButton(master=actions_frame, text="Download Log", command=on_start_server)
+b_downlog = ctk.CTkButton(master=actions_frame, text="Download Log", command=lambda: send_action_to_selected_client("DOWNLOADLOG"))
 b_downlog.pack(pady=5)
 
-b_downdata = ctk.CTkButton(master=actions_frame, text="Download all Data", command=on_start_server)
+b_downdata = ctk.CTkButton(master=actions_frame, text="Download all Data", command=lambda: send_action_to_selected_client("DOWNLOADALL"))
 b_downdata.pack(pady=5)
 
-b_shutdowncam = ctk.CTkButton(master=actions_frame, text="Shutdown Camera", command=on_start_server)
+b_shutdowncam = ctk.CTkButton(master=actions_frame, text="Shutdown Camera", command=lambda: send_action_to_selected_client("SHUTDOWN"))
 b_shutdowncam.pack(pady=5)
 
 # Run the Tkinter main loop
