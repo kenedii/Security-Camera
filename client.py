@@ -1,6 +1,8 @@
 import asyncio
 import websockets
 import client_app
+from SnapshotManager import clientlog_filename
+import time
 
 # Task to handle the client connection
 client_task = None
@@ -12,9 +14,13 @@ async def close_connection(websocket):
         client_task.cancel()  # Cancel the task to stop receiving messages
         try:
             await websocket.close()
-            print("Connection closed successfully")
+            with open(clientlog_filename, 'w') as file:
+                file.write(f"Connection closed at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+                file.close()
         except Exception as e:
-            print(f"Error while closing connection: {e}")
+            with open(clientlog_filename, 'w') as file:
+                file.write(f"Error while closing connection: {e} at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+                file.close()
 
 async def send_message(message, websocket):
     """Send a message to the server."""
@@ -48,11 +54,19 @@ async def receive_messages(websocket):
                 print(f"Server: {message[5:]}")
             elif message == "STARTCAM":
                 client_app.toggle_camera()
+                with open(clientlog_filename, 'w') as file:
+                    file.write(f"Camera started by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+                    file.close()
             elif message == "PAUSECAM":
                 client_app.toggle_camera()
+                with open(clientlog_filename, 'w') as file:
+                    file.write(f"Camera paused by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+                    file.close()
             elif message == "SHUTDOWN":
                 await close_connection(websocket)
-                print("Server requested to close the connection")
+                with open(clientlog_filename, 'w') as file:
+                    file.write(f"Connection closed by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+                    file.close()
                 break
             elif message == "DOWNLOADALL":
                 # Send face_timestamps.pkl, face_encodings.pkl, log.txt, DetectionLog.txt, and 'snapshots' folder
@@ -81,8 +95,12 @@ async def start_client():
     uri = "ws://localhost:8765"
     try:
         websocket = await websockets.connect(uri)
-        print("Connected to the server")
+        with open(clientlog_filename, 'w') as file:
+            file.write(f"Connected to the server at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+            file.close()
         client_task = asyncio.create_task(receive_messages(websocket))
         await client_task
     except Exception as e:
-        print(f"Error connecting to the server: {e}")
+        with open(clientlog_filename, 'w') as file:
+            file.write(f"Error connecting to the server: {e} at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+            file.close()
