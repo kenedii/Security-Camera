@@ -50,12 +50,22 @@ def on_start_client():
     b_closeclient.pack(pady=12, padx=10)
 
 def on_close_client():
+    global camera_on
+    # Send CAMERAOFF message if the camera is on
+    if camera_on and client.websocket:
+        asyncio.run_coroutine_threadsafe(client.send_message("CAMERAOFF", client.websocket), loop)
+    
     # Schedule the coroutine to close the client connection
     if client.client_task:
         asyncio.run_coroutine_threadsafe(client.close_connection(client.websocket), loop)
 
     # Disable the camera toggle button after the client is closed
     b_toggle_camera.configure(state="disabled")
+
+    # Set camera state to off and update button and indicator
+    camera_on = False
+    b_toggle_camera.configure(text="Start Camera")
+    l_indicator.configure(text="●", text_color="red")
 
     # Hide the close button after the client is closed
     b_closeclient.pack_forget()
