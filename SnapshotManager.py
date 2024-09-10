@@ -10,7 +10,8 @@ BASE_DIR = 'snapshots'
 ENCODINGS_FILE = 'face_encodings.pkl'
 TIMESTAMPS_FILE = 'face_timestamps.pkl'
 
-filename = f"Client-Log-{int(time.time())}"
+global clientlog_filename 
+clientlog_filename  = f"Client-Log-{int(time.time())}"
 
 
 def rw_encodings(operation='load', encodings=None): # Read/Write Encodings
@@ -55,7 +56,7 @@ def save_full_image(img, person_id):
     person_dir = ensure_directory(person_id)
     full_image_file = os.path.join(person_dir, f'full_image_{int(time.time())}.png')
     cv2.imwrite(full_image_file, full_image_file)
-    with open(filename, 'w') as file:
+    with open(clientlog_filename , 'w') as file:
         file.write(f"Full image saved to {full_image_file}\n at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
         file.close()
 
@@ -104,7 +105,7 @@ def takeSnapshot(face_timestamps, known_encodings, cooldown=10):
                         if not was_recently_seen(person_id, face_timestamps, cooldown):
                             save_full_image(img, person_id)
                             update_timestamp(person_id, face_timestamps)
-                            with open(filename, 'w') as file:
+                            with open(clientlog_filename , 'w') as file:
                                 file.write(f"Person {person_id} detected and saved at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
                                 file.close()
                         matched = True
@@ -116,16 +117,16 @@ def takeSnapshot(face_timestamps, known_encodings, cooldown=10):
                     save_full_image(img, new_person_id)
                     known_encodings[new_person_id] = face_encoding
                     update_timestamp(new_person_id, face_timestamps)
-                    with open(filename, 'w') as file:
+                    with open(clientlog_filename , 'w') as file:
                         file.write(f"New person detected and saved with ID {new_person_id} at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
                         file.close()
         else:
-            with open(filename, 'w') as file:
+            with open(clientlog_filename , 'w') as file:
                 file.write(f"Failed to capture image at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
                 file.close()
 
     except Exception as e:
-        with open(filename, 'w') as file:
+        with open(clientlog_filename , 'w') as file:
             file.write(f"An error occurred: {e} at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
             file.close()
     finally:
@@ -144,7 +145,7 @@ def scanCamera(delay=0.6, save_data_interval=10):
     face_timestamps = rw_timestamps(operation='load')
     snapshots_taken = 0 # Initialize the counter for snapshots taken
 
-    with open(filename, 'w') as file:
+    with open(clientlog_filename , 'w') as file:
         file.write(f"Starting camera scan at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
         file.close()
 
