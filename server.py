@@ -6,34 +6,42 @@ clients = {}  # Dictionary to track connected clients with their unique identifi
 async def handle_client(websocket, path):
     # Assign a unique identifier for each client
     client_id = len(clients) + 1
-    clients[client_id] = websocket
+    clients[client_id] = {'websocket': websocket, 'camera_on': False}
     print(f"Client {client_id} connected")
 
     try:
-        # Receive file name
-        file_name = await websocket.recv()
-        print(f"Receiving file from Client {client_id}: {file_name}")
-
-        # Receive file content
-        with open(file_name, "wb") as file:
-            while True:
-                data = await websocket.recv()
-                if data == "EOF":
-                    print(f"File received successfully from Client {client_id}")
-                    break
-                file.write(data)
-
-        # After receiving the file, send a confirmation message to the client
-        await websocket.send(f"File {file_name} received successfully")
-
-        # Keep the connection open for further communication
         while True:
+            # Receive the first message and check if it's a file or a regular message
             message = await websocket.recv()
-            if message == "exit":
-                print(f"Client {client_id} requested to close the connection")
-                break
-            print(f"Received from Client {client_id}: {message}")
-            await websocket.send(f"Server received: {message}")
+
+            if message.startswith("FILE:"):
+                # Handle file transfer
+                file_name = message[5:]
+                print(f"Receiving file from Client {client_id}: {file_name}")
+
+                with open(file_name, "wb") as file:
+                    while True:
+                        data = await websocket.recv()
+                        if data == "EOF":
+                            print(f"File received successfully from Client {client_id}")
+                            break
+                        file.write(data)
+
+                # Confirm file received
+                await websocket.send(f"File {file_name} received successfully")
+
+            elif message == "CAMERAON":
+                clients[client_id]['camera_on'] = True
+                print(f"Client {client_id} turned the camera ON")
+
+            elif message == "CAMERAOFF":
+                clients[client_id]['camera_on'] = False
+                print(f"Client {client_id} turned the camera OFF")
+
+            else:
+                # Treat it as a regular message
+                print(f"Received from Client {client_id}: {message}")
+                await websocket.send(f"Server received: {message}")
 
     except websockets.ConnectionClosedOK:
         print(f"Client {client_id} disconnected")
@@ -44,20 +52,20 @@ async def handle_client(websocket, path):
 
 async def send_message_to_all_clients(message):
     if clients:
-        await asyncio.wait([client.send(message) for client in clients.values()])
+        await asyncio.wait([client['websocket'].send(message) for client in clients.values()])
         print(f"Sent to all clients: {message}")
     else:
         print("No clients connected")
 
 async def send_message_to_specific_client(client_id, message):
     if client_id in clients:
-        await clients[client_id].send(message)
+        await clients[client_id]['websocket'].send(message)
         print(f"Sent to Client {client_id}: {message}")
     else:
         print(f"Client {client_id} not connected")
 
 def list_all_clients():
-    return list(clients.keys())
+    return [(client_id, client_data['camera_on']) for client_id, client_data in clients.items()]
 
 async def close_server(server):
     server.close()
@@ -67,7 +75,7 @@ async def close_server(server):
 async def start_server():
     server = await websockets.serve(handle_client, "localhost", 8765)
     print("Server started on ws://localhost:8765")
-
+    
     # Allow sending messages to clients from the server console
     """
     try:

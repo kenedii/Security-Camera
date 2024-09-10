@@ -66,7 +66,7 @@ def list_clients():
 
     # Add the label for connected clients
     label_clients = ctk.CTkLabel(master=client_frame, text="Connected clients", font=("Arial", 18))
-    label_clients.pack(pady=10)
+    label_clients.grid(row=0, column=0, columnspan=2, pady=10)
 
     # Get the list of clients from the server
     clients = server.list_all_clients()
@@ -74,14 +74,18 @@ def list_clients():
     # Reset selected_client variable to ensure a new selection can be made
     selected_client.set(0)
 
-    # List all clients with checkboxes
-    for idx, client in enumerate(clients, start=1):  # Start client ID from 1
-        checkbox = ctk.CTkRadioButton(master=client_frame, text=client, variable=selected_client, value=idx)
-        checkbox.pack(anchor="w", padx=10, pady=5)
+    # List all clients with checkboxes and status indicators
+    for idx, (client_id, camera_on) in enumerate(clients, start=1):  # Start client ID from 1
+        status_color = "green" if camera_on else "red"
+        status_circle = ctk.CTkLabel(master=client_frame, text="●", text_color=status_color, font=("Arial", 18))
+        status_circle.grid(row=idx, column=0, padx=10, pady=5, sticky="w")
+        
+        checkbox = ctk.CTkRadioButton(master=client_frame, text=f"Client {client_id}", variable=selected_client, value=client_id)
+        checkbox.grid(row=idx, column=1, padx=10, pady=5, sticky="w")
 
     # Add the refresh button to update the client list
     refresh_button = ctk.CTkButton(master=client_frame, text="Refresh", command=list_clients)
-    refresh_button.pack(pady=10)
+    refresh_button.grid(row=len(clients) + 1, column=0, columnspan=2, pady=10)
 
 # Create an event loop for the background thread
 loop = asyncio.new_event_loop()
