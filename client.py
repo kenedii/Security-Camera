@@ -1,5 +1,6 @@
 import asyncio
 import websockets
+import client_app
 
 # Task to handle the client connection
 client_task = None
@@ -46,9 +47,9 @@ async def receive_messages(websocket):
             if message.startswith("FILE:"):
                 print(f"Server: {message[5:]}")
             elif message == "STARTCAM":
-                pass
+                client_app.toggle_camera()
             elif message == "PAUSECAM":
-                pass
+                client_app.toggle_camera()
             elif message == "SHUTDOWN":
                 await close_connection(websocket)
                 print("Server requested to close the connection")
