@@ -55,12 +55,16 @@ async def receive_messages(websocket):
                 print("Server requested to close the connection")
                 break
             elif message == "DOWNLOADALL":
+                # Send face_timestamps.pkl, face_encodings.pkl, log.txt, DetectionLog.txt, and 'snapshots' folder
                 pass
             elif message == "DOWNLOADLOG":
+                # Send most recent log.txt and DetectionLog.txt
                 pass
             elif message == "VIEWFACES":
+                # Go through the 'snapshots' folder and send the image of each face
                 pass
             elif message == "LIVEFEED":
+                # Begin taking snapshots and sending them to the server
                 pass
             else:
                 print(f"Message from server: {message}")

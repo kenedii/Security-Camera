@@ -10,6 +10,9 @@ BASE_DIR = 'snapshots'
 ENCODINGS_FILE = 'face_encodings.pkl'
 TIMESTAMPS_FILE = 'face_timestamps.pkl'
 
+filename = f"Client-Log-{int(time.time())}"
+
+
 def rw_encodings(operation='load', encodings=None): # Read/Write Encodings
     if operation == 'load':
         """Load face encodings from the pkl file."""
@@ -52,7 +55,9 @@ def save_full_image(img, person_id):
     person_dir = ensure_directory(person_id)
     full_image_file = os.path.join(person_dir, f'full_image_{int(time.time())}.png')
     cv2.imwrite(full_image_file, full_image_file)
-    print(f"Saved full image to {full_image_file}")
+    with open(filename, 'w') as file:
+        file.write(f"Full image saved to {full_image_file}\n at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
+        file.close()
 
 def was_recently_seen(person_id, timestamps, cooldown=10):
     """Check if the person was seen within the last 'cooldown' seconds."""
@@ -99,6 +104,9 @@ def takeSnapshot(face_timestamps, known_encodings, cooldown=10):
                         if not was_recently_seen(person_id, face_timestamps, cooldown):
                             save_full_image(img, person_id)
                             update_timestamp(person_id, face_timestamps)
+                            with open(filename, 'w') as file:
+                                file.write(f"Person {person_id} detected and saved at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
+                                file.close()
                         matched = True
                         break
 
@@ -108,11 +116,18 @@ def takeSnapshot(face_timestamps, known_encodings, cooldown=10):
                     save_full_image(img, new_person_id)
                     known_encodings[new_person_id] = face_encoding
                     update_timestamp(new_person_id, face_timestamps)
+                    with open(filename, 'w') as file:
+                        file.write(f"New person detected and saved with ID {new_person_id} at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
+                        file.close()
         else:
-            print("Failed to capture image")
+            with open(filename, 'w') as file:
+                file.write(f"Failed to capture image at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
+                file.close()
 
     except Exception as e:
-        print("An error occurred:", e)
+        with open(filename, 'w') as file:
+            file.write(f"An error occurred: {e} at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
+            file.close()
     finally:
         # Release camera and close any open windows
         cam.release()
@@ -122,12 +137,16 @@ def takeSnapshot(face_timestamps, known_encodings, cooldown=10):
 def scanCamera(delay=0.6, save_data_interval=10):
     # Continuously take snapshots from the camera
     # with a delay of 'delay' seconds between each snapshot
-    # and save the face encodings and timestamps to the pkl files every 'save_data_interval' screenshots.
+    # and save the face encodings and timestamps to the pkl files every 'save_data_interval' snapshots.
 
     # Load face encodings and timestamps from the pkl files
     known_encodings = rw_encodings(operation='load')
     face_timestamps = rw_timestamps(operation='load')
     snapshots_taken = 0 # Initialize the counter for snapshots taken
+
+    with open(filename, 'w') as file:
+        file.write(f"Starting camera scan at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
+        file.close()
 
     while True: # Start scanning, run indefinitely.
         known_encodings, face_timestamps = takeSnapshot(known_encodings=known_encodings, face_timestamps=face_timestamps)
@@ -137,4 +156,3 @@ def scanCamera(delay=0.6, save_data_interval=10):
             rw_timestamps(operation='save', timestamps=face_timestamps)
         time.sleep(delay)
 
-scanCamera()
