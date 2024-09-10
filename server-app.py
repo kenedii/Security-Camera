@@ -57,6 +57,34 @@ def send_action_to_selected_client(action):
     asyncio.run_coroutine_threadsafe(server.send_message_to_specific_client(client_id, message), loop)
     print(f"Sent '{action}' to Client {client_id}")
 
+def update_action_buttons(camera_on):
+    """ Update the state of action buttons based on camera status """
+    state = 'normal' if camera_on else 'disabled'
+    b_livefeed.configure(state=state)
+    b_viewfaces.configure(state=state)
+    b_downlog.configure(state=state)
+    b_downdata.configure(state=state)
+    
+    if camera_on:
+        b_shutdowncam.configure(text="Shutdown Camera", command=lambda: send_action_to_selected_client("SHUTDOWN"))
+    else:
+        b_shutdowncam.configure(text="Start Camera", command=lambda: send_action_to_selected_client("STARTCAMERA"))
+
+def on_client_selection(*args):
+    client_id = selected_client.get()
+    if client_id != 0:
+        # Check if the selected client's camera is on or off
+        clients = server.list_all_clients()
+        camera_on = next((camera_on for cid, camera_on in clients if cid == client_id), False)
+        update_action_buttons(camera_on)
+        b_shutdowncam.configure(state='normal')  # Enable the button
+    else:
+        # No client selected, disable all buttons and set default button text
+        b_shutdowncam.configure(text="Start Camera", command=lambda: send_action_to_selected_client("STARTCAMERA"))
+        b_shutdowncam.configure(state='disabled')  # Disable the button
+        update_action_buttons(False)
+
+
 def list_clients():
     global selected_client  # Ensure we are using the global selected_client variable
     
@@ -125,8 +153,14 @@ b_downlog.pack(pady=5)
 b_downdata = ctk.CTkButton(master=actions_frame, text="Download all Data", command=lambda: send_action_to_selected_client("DOWNLOADALL"))
 b_downdata.pack(pady=5)
 
-b_shutdowncam = ctk.CTkButton(master=actions_frame, text="Shutdown Camera", command=lambda: send_action_to_selected_client("SHUTDOWN"))
+b_shutdowncam = ctk.CTkButton(master=actions_frame, text="Start Camera", command=lambda: send_action_to_selected_client("STARTCAMERA"))
 b_shutdowncam.pack(pady=5)
+
+# Bind the selected_client variable to the on_client_selection function
+selected_client.trace_add("write", on_client_selection)
+
+# Initialize the state of action buttons when the app starts
+update_action_buttons(False)  # Initially, no client selected, so buttons should be disabled
 
 # Run the Tkinter main loop
 root.mainloop()
