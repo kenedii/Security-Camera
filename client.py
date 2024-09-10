@@ -3,6 +3,7 @@ import websockets
 
 # Task to handle the client connection
 client_task = None
+websocket = None  # Declare this to store the active websocket connection
 
 async def close_connection(websocket):
     global client_task
@@ -14,20 +15,13 @@ async def close_connection(websocket):
         except Exception as e:
             print(f"Error while closing connection: {e}")
 
-async def send_file(file_path, websocket):
+async def send_message(message, websocket):
+    """Send a message to the server."""
     try:
-        file_name = file_path.split("/")[-1]
-        await websocket.send(f"FILE:{file_name}")
-
-        with open(file_path, "rb") as file:
-            while chunk := file.read(1024):
-                await websocket.send(chunk)
-
-        await websocket.send("EOF")
-        print("File sent successfully")
-
+        await websocket.send(message)
+        print(f"Message sent: {message}")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error sending message: {e}")
 
 async def receive_messages(websocket):
     global client_task
@@ -36,6 +30,22 @@ async def receive_messages(websocket):
             message = await websocket.recv()
             if message.startswith("FILE:"):
                 print(f"Server: {message[5:]}")
+            elif message == "STARTCAM":
+                pass
+            elif message == "PAUSECAM":
+                pass
+            elif message == "SHUTDOWN":
+                await close_connection(websocket)
+                print("Server requested to close the connection")
+                break
+            elif message == "DOWNLOADALL":
+                pass
+            elif message == "DOWNLOADLOG":
+                pass
+            elif message == "VIEWFACES":
+                pass
+            elif message == "LIVEFEED":
+                pass
             else:
                 print(f"Message from server: {message}")
 
@@ -47,9 +57,12 @@ async def receive_messages(websocket):
         print(f"Error: {e}")
 
 async def start_client():
+    global client_task, websocket
     uri = "ws://localhost:8765"
-    global client_task
-    async with websockets.connect(uri) as websocket:
+    try:
+        websocket = await websockets.connect(uri)
         print("Connected to the server")
         client_task = asyncio.create_task(receive_messages(websocket))
         await client_task
+    except Exception as e:
+        print(f"Error connecting to the server: {e}")
