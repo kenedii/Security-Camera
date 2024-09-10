@@ -23,6 +23,21 @@ async def send_message(message, websocket):
     except Exception as e:
         print(f"Error sending message: {e}")
 
+async def send_file(file_path, websocket):
+    try:
+        file_name = file_path.split("/")[-1]
+        await websocket.send(f"FILE:{file_name}")
+
+        with open(file_path, "rb") as file:
+            while chunk := file.read(1024):
+                await websocket.send(chunk)
+
+        await websocket.send("EOF")
+        print("File sent successfully")
+
+    except Exception as e:
+        print(f"Error: {e}")
+
 async def receive_messages(websocket):
     global client_task
     try:
