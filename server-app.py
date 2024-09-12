@@ -144,7 +144,7 @@ label_actions.pack(pady=10)
 b_livefeed = ctk.CTkButton(master=actions_frame, text="View Live Feed", command=lambda: send_action_to_selected_client("LIVEFEED"))
 b_livefeed.pack(pady=5)
 
-b_viewfaces = ctk.CTkButton(master=actions_frame, text="View Faces", command=lambda: send_action_to_selected_client("VIEWFACES"))
+b_viewfaces = ctk.CTkButton(master=actions_frame, text="Download Faces", command=lambda: send_action_to_selected_client("DOWNLOADFACES"))
 b_viewfaces.pack(pady=5)
 
 b_downlog = ctk.CTkButton(master=actions_frame, text="Download Log", command=lambda: send_action_to_selected_client("DOWNLOADLOG"))

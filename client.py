@@ -31,20 +31,35 @@ async def send_message(message, websocket):
     except Exception as e:
         print(f"Error sending message: {e}")
 
-async def send_file(file_path, websocket):
-    try:
-        file_name = file_path.split("/")[-1]
-        await websocket.send(f"FILE:{file_name}")
+async def send_file(file_path, websocket, video=False):
+    if video==False:
+        try:
+            file_name = file_path.split("/")[-1]
+            await websocket.send(f"FILE:{file_name}")
 
-        with open(file_path, "rb") as file:
-            while chunk := file.read(1024):
-                await websocket.send(chunk)
+            with open(file_path, "rb") as file:
+                while chunk := file.read(1024):
+                    await websocket.send(chunk)
 
-        await websocket.send("EOF")
-        print("File sent successfully")
+            await websocket.send("EOF")
+            print("File sent successfully")
 
-    except Exception as e:
-        print(f"Error: {e}")
+        except Exception as e:
+            print(f"Error: {e}")
+    else:
+        try:
+            file_name = file_path.split("/")[-1]
+            await websocket.send(f"VIDEOFEED")
+
+            with open(file_path, "rb") as file:
+                while chunk := file.read(1024):
+                    await websocket.send(chunk)
+
+            await websocket.send("EOF")
+            print("File sent successfully")
+
+        except Exception as e:
+            print(f"Error: {e}")
 
 async def receive_messages(websocket):
     global client_task
@@ -71,7 +86,8 @@ async def receive_messages(websocket):
                 files_to_zip = ['face_timestamps.pkl', 'face_encodings.pkl', clientlog_filename]
                 snapshots_folder = 'snapshots'  # Folder containing snapshots
                 zip_filename = f"client_data_{int(time.time())}.zip"
-
+                with open(clientlog_filename, 'w') as file:
+                    file.write(f"Server requested to download all data at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
                 # Create a zip file
                 with zipfile.ZipFile(zip_filename, 'w') as zipf:
                     for file in files_to_zip:
@@ -98,9 +114,25 @@ async def receive_messages(websocket):
                     file.write(f"Server requested to download latest log {clientlog_filename} at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
                 await send_file(clientlog_filename, websocket)
 
-            elif message == "VIEWFACES":
-                # Go through the 'snapshots' folder and send the image of each face
-                pass
+            elif message == "DOWNLOADFACES":
+                # Create a zip file
+                zip_filename = f"detected_faces_{int(time.time())}.zip"
+                with zipfile.ZipFile(zip_filename, 'w') as zipf:
+                    # Add the entire 'snapshots' folder if it exists
+                    if os.path.exists('snapshots'):
+                        for foldername, subfolders, filenames in os.walk(snapshots_folder):
+                            for filename in filenames:
+                                file_path = os.path.join(foldername, filename)
+                                zipf.write(file_path)
+
+                # Send the zip file to the server
+                await send_file(zip_filename, websocket)
+
+                # Remove the zip file after sending
+                os.remove(zip_filename)
+                with open(clientlog_filename, 'w') as file:
+                    file.write(f"{zip_filename} sent to server at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+                
             elif message == "LIVEFEED":
                 # Begin taking snapshots and sending them to the server
                 pass
