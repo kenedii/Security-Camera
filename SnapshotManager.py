@@ -106,7 +106,7 @@ def takeSnapshot(face_timestamps, known_encodings, cooldown=10):
                             save_full_image(img, person_id)
                             update_timestamp(person_id, face_timestamps)
                             with open(clientlog_filename , 'w') as file:
-                                file.write(f"Person {person_id} detected and saved at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
+                                file.write(f"Person {person_id} detected and saved at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
                                 file.close()
                         matched = True
                         break
@@ -118,16 +118,16 @@ def takeSnapshot(face_timestamps, known_encodings, cooldown=10):
                     known_encodings[new_person_id] = face_encoding
                     update_timestamp(new_person_id, face_timestamps)
                     with open(clientlog_filename , 'w') as file:
-                        file.write(f"New person detected and saved with ID {new_person_id} at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
+                        file.write(f"New person detected and saved with ID {new_person_id} at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
                         file.close()
         else:
             with open(clientlog_filename , 'w') as file:
-                file.write(f"Failed to capture image at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
+                file.write(f"Failed to capture image at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
                 file.close()
 
     except Exception as e:
         with open(clientlog_filename , 'w') as file:
-            file.write(f"An error occurred: {e} at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
+            file.write(f"An error occurred: {e} at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
             file.close()
     finally:
         # Release camera and close any open windows
@@ -146,7 +146,7 @@ def scanCamera(delay=0.6, save_data_interval=10):
     snapshots_taken = 0 # Initialize the counter for snapshots taken
 
     with open(clientlog_filename , 'w') as file:
-        file.write(f"Starting camera scan at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
+        file.write(f"Starting camera scan at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
         file.close()
 
     while True: # Start scanning, run indefinitely.
