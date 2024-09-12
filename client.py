@@ -69,10 +69,15 @@ async def receive_messages(websocket):
                     file.close()
                 break
             elif message == "DOWNLOADALL":
-                # Send face_timestamps.pkl, face_encodings.pkl, log.txt, DetectionLog.txt, and 'snapshots' folder
+                # Send face_timestamps.pkl, face_encodings.pkl, log.txt, and 'snapshots' folder
                 pass
             elif message == "DOWNLOADLOG":
-                # Send most recent log.txt and DetectionLog.txt
+                # Send most recent log.txt
+                with open(clientlog_filename, 'w') as file:
+                    file.write(f"Server requested to download latest log {clientlog_filename} at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+                    file.close()
+                await send_file(clientlog_filename, websocket)
+
                 pass
             elif message == "VIEWFACES":
                 # Go through the 'snapshots' folder and send the image of each face
