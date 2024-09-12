@@ -3,6 +3,9 @@ import websockets
 import client_app
 from SnapshotManager import clientlog_filename
 import time
+import zipfile
+import os
+import shutil
 
 # Task to handle the client connection
 client_task = None
@@ -16,11 +19,9 @@ async def close_connection(websocket):
             await websocket.close()
             with open(clientlog_filename, 'w') as file:
                 file.write(f"Connection closed at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
-                file.close()
         except Exception as e:
             with open(clientlog_filename, 'w') as file:
                 file.write(f"Error while closing connection: {e} at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
-                file.close()
 
 async def send_message(message, websocket):
     """Send a message to the server."""
@@ -56,29 +57,47 @@ async def receive_messages(websocket):
                 client_app.toggle_camera()
                 with open(clientlog_filename, 'w') as file:
                     file.write(f"Camera started by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
-                    file.close()
             elif message == "PAUSECAM":
                 client_app.toggle_camera()
                 with open(clientlog_filename, 'w') as file:
                     file.write(f"Camera paused by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
-                    file.close()
             elif message == "SHUTDOWN":
                 await close_connection(websocket)
                 with open(clientlog_filename, 'w') as file:
                     file.write(f"Connection closed by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
-                    file.close()
                 break
             elif message == "DOWNLOADALL":
-                # Send face_timestamps.pkl, face_encodings.pkl, log.txt, and 'snapshots' folder
-                pass
+                # Paths to files and folder to be zipped
+                files_to_zip = ['face_timestamps.pkl', 'face_encodings.pkl', clientlog_filename]
+                snapshots_folder = 'snapshots'  # Folder containing snapshots
+                zip_filename = f"client_data_{int(time.time())}.zip"
+
+                # Create a zip file
+                with zipfile.ZipFile(zip_filename, 'w') as zipf:
+                    for file in files_to_zip:
+                        if os.path.exists(file):
+                            zipf.write(file)
+                    # Add the entire 'snapshots' folder if it exists
+                    if os.path.exists(snapshots_folder):
+                        for foldername, subfolders, filenames in os.walk(snapshots_folder):
+                            for filename in filenames:
+                                file_path = os.path.join(foldername, filename)
+                                zipf.write(file_path)
+
+                # Send the zip file to the server
+                await send_file(zip_filename, websocket)
+
+                # Remove the zip file after sending
+                os.remove(zip_filename)
+                with open(clientlog_filename, 'w') as file:
+                    file.write(f"{zip_filename} sent to server at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+
             elif message == "DOWNLOADLOG":
                 # Send most recent log.txt
                 with open(clientlog_filename, 'w') as file:
                     file.write(f"Server requested to download latest log {clientlog_filename} at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
-                    file.close()
                 await send_file(clientlog_filename, websocket)
 
-                pass
             elif message == "VIEWFACES":
                 # Go through the 'snapshots' folder and send the image of each face
                 pass
@@ -102,10 +121,8 @@ async def start_client():
         websocket = await websockets.connect(uri)
         with open(clientlog_filename, 'w') as file:
             file.write(f"Connected to the server at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
-            file.close()
         client_task = asyncio.create_task(receive_messages(websocket))
         await client_task
     except Exception as e:
         with open(clientlog_filename, 'w') as file:
             file.write(f"Error connecting to the server: {e} at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
-            file.close()
