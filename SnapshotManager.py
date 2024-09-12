@@ -57,7 +57,7 @@ def save_full_image(img, person_id):
     full_image_file = os.path.join(person_dir, f'full_image_{int(time.time())}.png')
     cv2.imwrite(full_image_file, full_image_file)
     with open(clientlog_filename , 'w') as file:
-        file.write(f"Full image saved to {full_image_file}\n at {time.strftime("%Y-%m-%d %H:%M:%S", int(time.time()))}\n")
+        file.write(f"Full image saved to {full_image_file}\n at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
         file.close()
 
 def was_recently_seen(person_id, timestamps, cooldown=10):
