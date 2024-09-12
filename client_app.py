@@ -46,7 +46,17 @@ def toggle_camera():
 def check_camera_state():
     global camera_on
     if client.camera_on != camera_on:
-        toggle_camera()  # Toggle the camera if the state is different
+        print('Camera state changed by the server ')
+        # Update the local camera state to match the client
+        camera_on = client.camera_on
+
+        # Update the UI based on the new camera state
+        if camera_on:
+            b_toggle_camera.configure(text="Stop Camera")
+            l_indicator.configure(text="●", text_color="green")
+        else:
+            b_toggle_camera.configure(text="Start Camera")
+            l_indicator.configure(text="●", text_color="red")
 
     # Schedule this function to be called again after 1000ms (1 second)
     root.after(1000, check_camera_state)

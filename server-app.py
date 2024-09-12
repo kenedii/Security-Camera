@@ -53,7 +53,7 @@ def send_action_to_selected_client(action):
         return
     
     # Send the action to the selected client
-    message = f"Action: {action}"
+    message = f"{action}"
     asyncio.run_coroutine_threadsafe(server.send_message_to_specific_client(client_id, message), loop)
     print(f"Sent '{action}' to Client {client_id}")
 

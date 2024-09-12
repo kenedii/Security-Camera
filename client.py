@@ -67,15 +67,15 @@ async def receive_messages(websocket):
             message = await websocket.recv()
             if message.startswith("FILE:"):
                 print(f"Server: {message[5:]}")
-            elif message == "STARTCAM":
+            elif message == "STARTCAMERA":
                 camera_on = True
                 with open(clientlog_filename, 'w') as file:
                     file.write(f"Camera started by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
-            elif message == "PAUSECAM":
+            elif message == "SHUTDOWN":
                 camera_on = False
                 with open(clientlog_filename, 'w') as file:
                     file.write(f"Camera paused by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
-            elif message == "SHUTDOWN":
+            elif message == "DISCONNECT":
                 await close_connection(websocket)
                 with open(clientlog_filename, 'w') as file:
                     file.write(f"Connection closed by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
