@@ -4,6 +4,7 @@ import client
 import threading
 import SnapshotManager
 
+
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
 
@@ -27,17 +28,28 @@ def toggle_camera():
 
         # Update the button text and indicator color
         if camera_on:
+            client.camera_on = True
             b_toggle_camera.configure(text="Stop Camera")
             l_indicator.configure(text="●", text_color="green")
             # Send CAMERAON message to the server
             asyncio.run_coroutine_threadsafe(client.send_message("CAMERAON", client.websocket), loop)
         else:
+            client.camera_on = False
             b_toggle_camera.configure(text="Start Camera")
             l_indicator.configure(text="●", text_color="red")
             # Send CAMERAOFF message to the server
             asyncio.run_coroutine_threadsafe(client.send_message("CAMERAOFF", client.websocket), loop)
     else:
         print("Client not connected to the server.")
+
+# Function to check if the camera state changed on the server side
+def check_camera_state():
+    global camera_on
+    if client.camera_on != camera_on:
+        toggle_camera()  # Toggle the camera if the state is different
+
+    # Schedule this function to be called again after 1000ms (1 second)
+    root.after(1000, check_camera_state)
 
 def on_start_client():
     # Schedule the coroutine to start the client
@@ -49,6 +61,9 @@ def on_start_client():
     # Hide the start button after the client is started
     b_startclient.pack_forget()
     b_closeclient.pack(pady=12, padx=10)
+
+    # Start checking the camera state
+    check_camera_state()
 
 def on_close_client():
     global camera_on
@@ -72,6 +87,7 @@ def on_close_client():
     b_closeclient.pack_forget()
     b_startclient.pack(pady=12, padx=10)
 
+# UI components
 frame = ctk.CTkFrame(master=root)
 frame.pack(pady=20, padx=60, fill="both", expand=True)
 

@@ -1,15 +1,14 @@
 import asyncio
 import websockets
-import client_app
 from SnapshotManager import clientlog_filename
 import time
 import zipfile
 import os
-import shutil
 
 # Task to handle the client connection
 client_task = None
 websocket = None  # Declare this to store the active websocket connection
+camera_on = False
 
 async def close_connection(websocket):
     global client_task
@@ -69,11 +68,11 @@ async def receive_messages(websocket):
             if message.startswith("FILE:"):
                 print(f"Server: {message[5:]}")
             elif message == "STARTCAM":
-                client_app.toggle_camera()
+                camera_on = True
                 with open(clientlog_filename, 'w') as file:
                     file.write(f"Camera started by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
             elif message == "PAUSECAM":
-                client_app.toggle_camera()
+                camera_on = False
                 with open(clientlog_filename, 'w') as file:
                     file.write(f"Camera paused by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
             elif message == "SHUTDOWN":
