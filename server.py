@@ -1,5 +1,6 @@
 import asyncio
 import websockets
+import os
 
 clients = {}  # Dictionary to track connected clients with their unique identifier
 
@@ -9,6 +10,10 @@ async def handle_client(websocket, path):
     clients[client_id] = {'websocket': websocket, 'camera_on': False}
     print(f"Client {client_id} connected")
 
+    # Create a directory for this client if it doesn't already exist
+    client_folder = f"client_data/{client_id}"
+    os.makedirs(client_folder, exist_ok=True)
+
     try:
         while True:
             # Receive the first message and check if it's a file or a regular message
@@ -17,9 +22,10 @@ async def handle_client(websocket, path):
             if message.startswith("FILE:"):
                 # Handle file transfer
                 file_name = message[5:]
+                file_path = os.path.join(client_folder, file_name)
                 print(f"Receiving file from Client {client_id}: {file_name}")
 
-                with open(file_name, "wb") as file:
+                with open(file_path, "wb") as file:
                     while True:
                         data = await websocket.recv()
                         if data == "EOF":
@@ -28,7 +34,7 @@ async def handle_client(websocket, path):
                         file.write(data)
 
                 # Confirm file received
-                await websocket.send(f"File {file_name} received successfully")
+                await websocket.send(f"File {file_name} received successfully and saved to {file_path}")
 
             elif message == "CAMERAON":
                 clients[client_id]['camera_on'] = True
@@ -75,7 +81,7 @@ async def close_server(server):
 async def start_server():
     server = await websockets.serve(handle_client, "localhost", 8765)
     print("Server started on ws://localhost:8765")
-    
+
     # Allow sending messages to clients from the server console
     """
     try:
@@ -103,4 +109,5 @@ async def start_server():
         print("Server interrupted by user")
         await close_server(server)
     """
+
     return server
