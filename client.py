@@ -73,20 +73,22 @@ async def live_feed(websocket):
     cap = VideoCapture(0)
     if not cap.isOpened():
         with open(clientlog_filename, 'w') as file:
-            file.write(f"Error: Could not open camera at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+            file.write(f"Error: Could not open camera for live feed at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
         return
 
     while livefeed_on:
         ret, frame = cap.read()
         if not ret:
             with open(clientlog_filename, 'w') as file:
-                file.write(f"Error: Could not read frame at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+                file.write(f"Error: Could not read frame taken for live feed at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
             break
 
         # Send the frame to the server
         #frame_path = f"cache/livefeed_{int(time.time())}.jpg"
         #imwrite(frame_path, frame)
         await send_file(frame, websocket, video=True)
+        time.sleep(0.143)
+
     await send_message("FEED_OVER", websocket)
 
     # Release the camera and close the window
@@ -96,6 +98,7 @@ async def live_feed(websocket):
 async def receive_messages(websocket):
     global Ccamera_on
     global client_task
+    global livefeed_on
     try:
         while True:
             message = await websocket.recv()
@@ -169,6 +172,9 @@ async def receive_messages(websocket):
                 
             elif message == "LIVEFEED":
                 # Begin taking snapshots and sending them to the server
+                livefeed_on = not livefeed_on
+                if livefeed_on:
+                    await live_feed(websocket)
                 pass
             else:
                 print(f"Message from server: {message}")
