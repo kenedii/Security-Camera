@@ -21,6 +21,24 @@ def start_event_loop(loop):
     asyncio.set_event_loop(loop)
     loop.run_forever()
 
+async def update_client_status():
+    previous_clients = []
+    while True:
+        clients = server.list_all_clients()
+        selected = selected_client.get()
+
+        # Only refresh if the client list has changed (i.e., new client or disconnection)
+        if clients != previous_clients:
+            list_clients(clients)
+            previous_clients = clients  # Update previous_clients to the latest state
+
+        # Update the action buttons if a client is selected
+        if selected:
+            camera_on = next((camera_on for cid, camera_on in clients if cid == selected), False)
+            update_action_buttons(camera_on)
+        
+        await asyncio.sleep(2)  # Check every 2 seconds
+
 def on_start_server():
     global server_instance
     # Schedule the coroutine to be executed
@@ -34,7 +52,9 @@ def on_start_server():
     # Show the client and actions frames and list clients
     client_frame.pack(side="left", fill="y", padx=20, pady=20)
     actions_frame.pack(side="left", fill="y", padx=20, pady=20)
-    list_clients()
+    
+    # Start the client status checker
+    asyncio.run_coroutine_threadsafe(update_client_status(), loop)
 
 def on_close_server():
     # Schedule the coroutine to close the server
@@ -86,8 +106,46 @@ def on_client_selection(*args):
         b_shutdowncam.configure(state='disabled')  # Disable the button
         update_action_buttons(False)
 
+def open_live_feed_window():
+    """ Opens the live feed window for the selected client """
+    client_id = selected_client.get()
+    if client_id == 0:
+        print("No client selected")
+        return
 
-def list_clients():
+    # Create a new window for the live feed
+    feed_window = ctk.CTkToplevel(root)
+    feed_window.title(f"Live Feed - Client {client_id}")
+    feed_window.geometry("640x480")
+
+    # Retrieve the video frame from the server's dictionary
+    video_frame = server.lf_video_frame.get(client_id)
+    if not video_frame:
+        print(f"No live feed available for Client {client_id}")
+        return
+    
+    # Create a label to display the video feed
+    video_label = ctk.CTkLabel(master=feed_window)
+    video_label.pack(fill="both", expand=True)
+
+    def update_video_feed():
+        nonlocal video_frame
+        if video_frame:
+            # Convert the byte data to an image
+            image = Image.open(io.BytesIO(video_frame))
+            image_tk = ImageTk.PhotoImage(image)
+
+            # Update the label with the new frame
+            video_label.configure(image=image_tk)
+            video_label.image = image_tk
+
+        # Schedule the next frame update
+        feed_window.after(50, update_video_feed)  # Refresh every 50ms
+
+    # Start the video feed update loop
+    update_video_feed()
+
+def list_clients(clients=None):
     global selected_client  # Ensure we are using the global selected_client variable
     
     # Clear the client list frame
@@ -98,8 +156,8 @@ def list_clients():
     label_clients = ctk.CTkLabel(master=client_frame, text="Connected clients", font=("Arial", 18))
     label_clients.grid(row=0, column=0, columnspan=2, pady=10)
 
-    # Get the list of clients from the server
-    clients = server.list_all_clients()
+    # Get the list of clients from the server if not passed
+    clients = clients if clients else server.list_all_clients()
 
     # Reset selected_client variable to ensure a new selection can be made
     selected_client.set(0)
@@ -112,10 +170,6 @@ def list_clients():
         
         checkbox = ctk.CTkRadioButton(master=client_frame, text=f"Client {client_id}", variable=selected_client, value=client_id)
         checkbox.grid(row=idx, column=1, padx=10, pady=5, sticky="w")
-
-    # Add the refresh button to update the client list
-    refresh_button = ctk.CTkButton(master=client_frame, text="Refresh", command=list_clients)
-    refresh_button.grid(row=len(clients) + 1, column=0, columnspan=2, pady=10)
 
 # Create an event loop for the background thread
 loop = asyncio.new_event_loop()
@@ -143,7 +197,7 @@ label_actions = ctk.CTkLabel(master=actions_frame, text="Actions", font=("Arial"
 label_actions.pack(pady=10)
 
 # Modify the action buttons to send specific actions to the selected client
-b_livefeed = ctk.CTkButton(master=actions_frame, text="View Live Feed", command=lambda: send_action_to_selected_client("LIVEFEED"))
+b_livefeed = ctk.CTkButton(master=actions_frame, text="View Live Feed", command=open_live_feed_window)
 b_livefeed.pack(pady=5)
 
 b_viewfaces = ctk.CTkButton(master=actions_frame, text="Download Faces", command=lambda: send_action_to_selected_client("DOWNLOADFACES"))
