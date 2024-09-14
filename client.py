@@ -4,7 +4,7 @@ from SnapshotManager import clientlog_filename
 import time
 import zipfile
 import os
-from cv2 import VideoCapture, imshow, waitKey, destroyAllWindows, imwrite
+from cv2 import VideoCapture, waitKey, destroyAllWindows, imwrite
 import cv2
 
 # Task to handle the client connection
