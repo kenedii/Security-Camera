@@ -62,7 +62,7 @@ async def send_file(file_path, websocket, video=False):
                 await websocket.send(chunk)
 
             await websocket.send("EOF")
-            print("File sent successfully")
+            #print("File sent successfully")
 
         except Exception as e:
             print(f"Error: {e}")
@@ -75,6 +75,8 @@ async def live_feed(websocket):
         with open(clientlog_filename, 'w') as file:
             file.write(f"Error: Could not open camera for live feed at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
         return
+    
+    await send_message("FEED_ON", websocket)
 
     while livefeed_on:
         ret, frame = cap.read()
