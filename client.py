@@ -8,7 +8,8 @@ import os
 # Task to handle the client connection
 client_task = None
 websocket = None  # Declare this to store the active websocket connection
-camera_on = False
+global Ccamera_on # If server requests to toggle camera, this will be toggled
+Ccamera_on = False # client_app.py checks if this variable changes every 1s
 
 async def close_connection(websocket):
     global client_task
@@ -61,6 +62,7 @@ async def send_file(file_path, websocket, video=False):
             print(f"Error: {e}")
 
 async def receive_messages(websocket):
+    global Ccamera_on
     global client_task
     try:
         while True:
@@ -68,11 +70,12 @@ async def receive_messages(websocket):
             if message.startswith("FILE:"):
                 print(f"Server: {message[5:]}")
             elif message == "STARTCAMERA":
-                camera_on = True
+                Ccamera_on = True
+                print(f"Server started camera {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}")
                 with open(clientlog_filename, 'w') as file:
                     file.write(f"Camera started by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
             elif message == "SHUTDOWN":
-                camera_on = False
+                Ccamera_on = False
                 with open(clientlog_filename, 'w') as file:
                     file.write(f"Camera paused by server request at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
             elif message == "DISCONNECT":

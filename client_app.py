@@ -4,6 +4,9 @@ import client
 import threading
 import SnapshotManager
 
+# Track camera state (initially off)
+global camera_on
+camera_on = False
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")
@@ -17,8 +20,6 @@ root.geometry("800x600")
 loop = asyncio.new_event_loop()
 threading.Thread(target=lambda: asyncio.set_event_loop(loop) or loop.run_forever(), daemon=True).start()
 
-# Track camera state (initially off)
-camera_on = False
 
 # Function to update the button and send message to the server
 def toggle_camera():
@@ -28,13 +29,13 @@ def toggle_camera():
 
         # Update the button text and indicator color
         if camera_on:
-            client.camera_on = True
+            client.Ccamera_on = True
             b_toggle_camera.configure(text="Stop Camera")
             l_indicator.configure(text="●", text_color="green")
             # Send CAMERAON message to the server
             asyncio.run_coroutine_threadsafe(client.send_message("CAMERAON", client.websocket), loop)
         else:
-            client.camera_on = False
+            client.Ccamera_on = False
             b_toggle_camera.configure(text="Start Camera")
             l_indicator.configure(text="●", text_color="red")
             # Send CAMERAOFF message to the server
@@ -42,26 +43,31 @@ def toggle_camera():
     else:
         print("Client not connected to the server.")
 
-# Function to check if the camera state changed on the server side
-def check_camera_state():
+# Asynchronous function to check the camera state in the background
+async def background_check_camera_state():
     global camera_on
-    if client.camera_on != camera_on:
-        print('Camera state changed by the server ')
-        # Update the local camera state to match the client
-        camera_on = client.camera_on
+    while True:
+        if client.Ccamera_on != camera_on:  # Update this to check Ccamera_on
+            print('Camera state changed by the server')
 
-        # Update the UI based on the new camera state
-        if camera_on:
-            b_toggle_camera.configure(text="Stop Camera")
-            l_indicator.configure(text="●", text_color="green")
-        else:
-            b_toggle_camera.configure(text="Start Camera")
-            l_indicator.configure(text="●", text_color="red")
+            # Update the local camera state to match the client
+            camera_on = client.Ccamera_on  # Also update this to match Ccamera_on
 
-    # Schedule this function to be called again after 1000ms (1 second)
-    root.after(1000, check_camera_state)
+            # Update the UI based on the new camera state (without toggling)
+            if camera_on:
+                b_toggle_camera.configure(text="Stop Camera")
+                l_indicator.configure(text="●", text_color="green")
+                asyncio.run_coroutine_threadsafe(client.send_message("CAMERAON", client.websocket), loop)
+            else:
+                b_toggle_camera.configure(text="Start Camera")
+                l_indicator.configure(text="●", text_color="red")
+                asyncio.run_coroutine_threadsafe(client.send_message("CAMERAOFF", client.websocket), loop)
+        
+        # Sleep for 1 second before checking again
+        await asyncio.sleep(1)
 
 def on_start_client():
+    print("Starting client...")
     # Schedule the coroutine to start the client
     asyncio.run_coroutine_threadsafe(client.start_client(), loop)
 
@@ -72,8 +78,8 @@ def on_start_client():
     b_startclient.pack_forget()
     b_closeclient.pack(pady=12, padx=10)
 
-    # Start checking the camera state
-    check_camera_state()
+    # Start the background task to check camera state asynchronously
+    asyncio.run_coroutine_threadsafe(background_check_camera_state(), loop)
 
 def on_close_client():
     global camera_on
