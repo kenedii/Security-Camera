@@ -2,9 +2,17 @@ import asyncio
 import websockets
 import os
 
+global lf_video_frame
+lf_video_frame = None
+global lf_on
+lf_on = False
+
 clients = {}  # Dictionary to track connected clients with their unique identifier
 
 async def handle_client(websocket, path):
+    global lf_video_frame
+    global lf_on
+
     # Assign a unique identifier for each client
     client_id = len(clients) + 1
     clients[client_id] = {'websocket': websocket, 'camera_on': False}
@@ -35,6 +43,28 @@ async def handle_client(websocket, path):
 
                 # Confirm file received
                 await websocket.send(f"File {file_name} received successfully and saved to {file_path}")
+
+            if message == ("VIDEOFEED"):
+                # Handle file transfer
+                #print(f"Receiving video feed data from Client {client_id}")
+                
+                while True:
+                    data = await websocket.recv()
+                    lf_video_frame = data
+                    if data == "EOF":
+                        print(f"vf image received successfully from Client {client_id}")
+                        break
+
+                # Confirm file received
+                #await websocket.send(f"File {file_name} received successfully and saved to {file_path}")
+
+            elif message.startswith("FEED_"):
+                if message == "FEED_ON":
+                    lf_on = True
+                    #print(f"Client {client_id} started the live feed")
+                elif message == "FEED_OVER":
+                    lf_on = False
+                    #print(f"Client {client_id} stopped the live feed")
 
             elif message == "CAMERAON":
                 clients[client_id]['camera_on'] = True
