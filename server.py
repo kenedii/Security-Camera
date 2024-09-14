@@ -5,7 +5,7 @@ import os
 global lf_video_frame
 lf_video_frame = {} # Dictionary of client_id:video_feed_frame
 global lf_on
-lf_on = False
+lf_on = {} # Dictionary of client_id:live_feed_on(bool)
 
 clients = {}  # Dictionary to track connected clients with their unique identifier
 
@@ -44,7 +44,7 @@ async def handle_client(websocket, path):
                 # Confirm file received
                 await websocket.send(f"File {file_name} received successfully and saved to {file_path}")
 
-            if message == ("VIDEOFEED"):
+            elif message == ("VIDEOFEED"):
                 # Handle file transfer
                 #print(f"Receiving video feed data from Client {client_id}")
                 
@@ -60,10 +60,10 @@ async def handle_client(websocket, path):
 
             elif message.startswith("FEED_"):
                 if message == "FEED_ON":
-                    lf_on = True
+                    lf_on[client_id] = True
                     #print(f"Client {client_id} started the live feed")
                 elif message == "FEED_OVER":
-                    lf_on = False
+                    lf_on[client_id] = False
                     #print(f"Client {client_id} stopped the live feed")
 
             elif message == "CAMERAON":

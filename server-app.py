@@ -106,7 +106,11 @@ def on_client_selection(*args):
         b_shutdowncam.configure(state='disabled')  # Disable the button
         update_action_buttons(False)
 
-def open_live_feed_window():
+def on_start_feed():
+    # Schedule the coroutine to be executed
+    asyncio.run_coroutine_threadsafe(open_live_feed_window(), loop)
+
+async def open_live_feed_window():
     """ Opens the live feed window for the selected client """
     client_id = selected_client.get()
     if client_id == 0:
@@ -116,21 +120,25 @@ def open_live_feed_window():
     # Create a new window for the live feed
     feed_window = ctk.CTkToplevel(root)
     feed_window.title(f"Live Feed - Client {client_id}")
-    feed_window.geometry("640x480")
+    feed_window.geometry("800x600")
 
     # Retrieve the video frame from the server's dictionary
     video_frame = server.lf_video_frame.get(client_id)
-    if not video_frame:
+    return_if_failed = 0
+    while not video_frame:
         print(f"No live feed available for Client {client_id}")
-        return
-    
+        return_if_failed += 1
+        if return_if_failed == 5:
+            return
+        await asyncio.sleep(0.5)  # Use await for asyncio sleep
+
     # Create a label to display the video feed
     video_label = ctk.CTkLabel(master=feed_window)
     video_label.pack(fill="both", expand=True)
 
     def update_video_feed():
         nonlocal video_frame
-        if video_frame:
+        if video_frame != server.lf_video_frame.get(client_id):
             # Convert the byte data to an image
             image = Image.open(io.BytesIO(video_frame))
             image_tk = ImageTk.PhotoImage(image)
@@ -197,7 +205,7 @@ label_actions = ctk.CTkLabel(master=actions_frame, text="Actions", font=("Arial"
 label_actions.pack(pady=10)
 
 # Modify the action buttons to send specific actions to the selected client
-b_livefeed = ctk.CTkButton(master=actions_frame, text="View Live Feed", command=open_live_feed_window)
+b_livefeed = ctk.CTkButton(master=actions_frame, text="View Live Feed", command= on_start_feed)
 b_livefeed.pack(pady=5)
 
 b_viewfaces = ctk.CTkButton(master=actions_frame, text="Download Faces", command=lambda: send_action_to_selected_client("DOWNLOADFACES"))
