@@ -3,6 +3,8 @@ import asyncio
 import server
 import threading
 import tkinter as tk  # Required for IntVar
+from PIL import Image, ImageTk
+import io
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("dark-blue")

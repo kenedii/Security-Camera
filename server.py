@@ -3,7 +3,7 @@ import websockets
 import os
 
 global lf_video_frame
-lf_video_frame = None
+lf_video_frame = {} # Dictionary of client_id:video_feed_frame
 global lf_on
 lf_on = False
 
@@ -50,7 +50,7 @@ async def handle_client(websocket, path):
                 
                 while True:
                     data = await websocket.recv()
-                    lf_video_frame = data
+                    lf_video_frame[{client_id}] = data
                     if data == "EOF":
                         print(f"vf image received successfully from Client {client_id}")
                         break
