@@ -4,7 +4,7 @@ from SnapshotManager import clientlog_filename
 import time
 import zipfile
 import os
-from cv2 import VideoCapture, waitKey, destroyAllWindows, imwrite
+from cv2 import VideoCapture, waitKey, destroyAllWindows, imwrite, imencode
 import cv2
 
 # Task to handle the client connection
@@ -37,35 +37,27 @@ async def send_message(message, websocket):
     except Exception as e:
         print(f"Error sending message: {e}")
 
-async def send_file(file_path, websocket, video=False):
-    if video==False:
-        try:
-            file_name = file_path.split("/")[-1]
-            await websocket.send(f"FILE:{file_name}")
-
-            with open(file_path, "rb") as file:
-                while chunk := file.read(1024):
-                    await websocket.send(chunk)
-
-            await websocket.send("EOF")
-            print("File sent successfully")
-
-        except Exception as e:
-            print(f"Error: {e}")
-    else:
-        try:
-            #file_name = file_path.split("/")[-1]
+async def send_file(file_data, websocket, video=False):
+    """Send file data or video frames to the server."""
+    try:
+        if video:
+            # Send the video frame
             await websocket.send(f"VIDEOFEED")
-
-            #with open(file_path, "rb") as file:
-            while chunk := file_path.read(1024):
-                await websocket.send(chunk)
-
+            await websocket.send(file_data)
             await websocket.send("EOF")
             #print("File sent successfully")
+        else:
+            # Handle regular file sending
+            file_name = file_data.split("/")[-1]
+            await websocket.send(f"FILE:{file_name}")
+            with open(file_data, "rb") as file:
+                while chunk := file.read(1024):
+                    await websocket.send(chunk)
+            await websocket.send("EOF")
+        print("Data sent successfully")
+    except Exception as e:
+        print(f"Error: {e}")
 
-        except Exception as e:
-            print(f"Error: {e}")
 
 async def live_feed(websocket):
     global livefeed_on
@@ -77,6 +69,7 @@ async def live_feed(websocket):
         return
     
     await send_message("FEED_ON", websocket)
+    error_count = 0
 
     while livefeed_on:
         ret, frame = cap.read()
@@ -85,17 +78,31 @@ async def live_feed(websocket):
                 file.write(f"Error: Could not read frame taken for live feed at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
             break
 
-        # Send the frame to the server
-        #frame_path = f"cache/livefeed_{int(time.time())}.jpg"
-        #imwrite(frame_path, frame)
-        await send_file(frame, websocket, video=True)
-        time.sleep(0.143)
+        # Encode the frame as a JPEG byte stream
+        _, buffer = imencode('.jpg', frame)
+        frame_data = buffer.tobytes()
+
+        # Send the encoded frame
+        try:
+            await send_file(frame_data, websocket, video=True)
+        except Exception as e:
+            error_count += 1
+            if error_count > 10:
+                with open(clientlog_filename, 'w') as file:
+                    file.write(f"Error sending video frame: {e} at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime())}\n")
+                    break
+        print("Sent frame for live feed")
+
+        # Add a delay for frame rate control
+        await asyncio.sleep(0.143)
 
     await send_message("FEED_OVER", websocket)
 
     # Release the camera and close the window
     cap.release()
     destroyAllWindows()
+
+    livefeed_on = False
 
 async def receive_messages(websocket):
     global Ccamera_on

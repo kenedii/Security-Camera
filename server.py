@@ -47,13 +47,12 @@ async def handle_client(websocket, path):
             elif message == ("VIDEOFEED"):
                 # Handle file transfer
                 #print(f"Receiving video feed data from Client {client_id}")
-                
-                while True:
-                    data = await websocket.recv()
-                    lf_video_frame[{client_id}] = data
-                    if data == "EOF":
-                        print(f"vf image received successfully from Client {client_id}")
-                        break
+                data = await websocket.recv()
+                lf_video_frame[client_id] = data
+                if data == "EOF":
+                    print(f"vf image received successfully from Client {client_id}")
+                    break
+
 
                 # Confirm file received
                 #await websocket.send(f"File {file_name} received successfully and saved to {file_path}")
@@ -63,7 +62,8 @@ async def handle_client(websocket, path):
                     lf_on[client_id] = True
                     #print(f"Client {client_id} started the live feed")
                 elif message == "FEED_OVER":
-                    lf_on[client_id] = False
+                    del lf_on[client_id]
+                    del lf_video_frame[client_id]
                     #print(f"Client {client_id} stopped the live feed")
 
             elif message == "CAMERAON":

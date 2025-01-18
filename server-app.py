@@ -108,50 +108,58 @@ def on_client_selection(*args):
 
 def on_start_feed():
     # Schedule the coroutine to be executed
-    asyncio.run_coroutine_threadsafe(open_live_feed_window(), loop)
+    asyncio.run_coroutine_threadsafe(toggle_live_feed_window(), loop)
 
-async def open_live_feed_window():
-    """ Opens the live feed window for the selected client """
+async def toggle_live_feed_window():
+    """Toggles the live feed window for the selected client."""
     client_id = selected_client.get()
     if client_id == 0:
         print("No client selected")
         return
 
-    # Create a new window for the live feed
+    # Request the live feed from the client
+    await server.send_message_to_specific_client(client_id, "LIVEFEED")
+
+    # Create the live feed window
     feed_window = ctk.CTkToplevel(root)
     feed_window.title(f"Live Feed - Client {client_id}")
     feed_window.geometry("800x600")
 
-    # Retrieve the video frame from the server's dictionary
-    video_frame = server.lf_video_frame.get(client_id)
-    return_if_failed = 0
-    while not video_frame:
-        print(f"No live feed available for Client {client_id}")
-        return_if_failed += 1
-        if return_if_failed == 5:
-            return
-        await asyncio.sleep(0.5)  # Use await for asyncio sleep
-
-    # Create a label to display the video feed
+    # Label to display the video feed
     video_label = ctk.CTkLabel(master=feed_window)
     video_label.pack(fill="both", expand=True)
 
     def update_video_feed():
-        nonlocal video_frame
-        if video_frame != server.lf_video_frame.get(client_id):
-            # Convert the byte data to an image
-            image = Image.open(io.BytesIO(video_frame))
-            image_tk = ImageTk.PhotoImage(image)
+        nonlocal client_id
+        video_frame = server.lf_video_frame.get(client_id)
 
-            # Update the label with the new frame
-            video_label.configure(image=image_tk)
-            video_label.image = image_tk
+        if video_frame:
+            try:
+                # Decode the byte stream into an image
+                image = Image.open(io.BytesIO(video_frame))
+                image_tk = ImageTk.PhotoImage(image)
+                video_label.configure(image=image_tk)
+                video_label.image = image_tk
+            except Exception as e:
+                print(f"Error updating video feed: {e}")
 
         # Schedule the next frame update
-        feed_window.after(50, update_video_feed)  # Refresh every 50ms
+        feed_window.after(50, update_video_feed)
 
-    # Start the video feed update loop
+    def on_window_close():
+        # Send a message to stop the live feed
+        asyncio.run_coroutine_threadsafe(
+            server.send_message_to_specific_client(client_id, "LIVEFEED"),
+            loop
+        )
+        feed_window.destroy()
+
+    # Handle window close event
+    feed_window.protocol("WM_DELETE_WINDOW", on_window_close)
+
+    # Start updating the video feed
     update_video_feed()
+
 
 def list_clients(clients=None):
     global selected_client  # Ensure we are using the global selected_client variable
@@ -205,7 +213,7 @@ label_actions = ctk.CTkLabel(master=actions_frame, text="Actions", font=("Arial"
 label_actions.pack(pady=10)
 
 # Modify the action buttons to send specific actions to the selected client
-b_livefeed = ctk.CTkButton(master=actions_frame, text="View Live Feed", command= on_start_feed)
+b_livefeed = ctk.CTkButton(master=actions_frame, text="View Live Feed", command=on_start_feed)
 b_livefeed.pack(pady=5)
 
 b_viewfaces = ctk.CTkButton(master=actions_frame, text="Download Faces", command=lambda: send_action_to_selected_client("DOWNLOADFACES"))
