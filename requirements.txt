@@ -1,0 +1,5 @@
+websockets
+customtkinter
+pillow
+opencv-python
+face_recognition
